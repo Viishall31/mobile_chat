@@ -1,0 +1,58 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.revertMonkeyPatch = exports.applyMonkeyPatch = void 0;
+var NativeAndroidManager = _interopRequireWildcard(require("react-native/Libraries/Components/StatusBar/NativeStatusBarManagerAndroid"));
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+// @ts-expect-error because there is no corresponding type definition
+
+const RCTStatusBarManagerCompat =
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+require("./specs/NativeStatusBarManagerCompat").default;
+
+// Copy original default manager to keep its original state and methods
+const OriginalNativeAndroidManager = {
+  ...NativeAndroidManager.default
+};
+
+// Create a new object that modifies the necessary methods
+// On Android < 11 RN uses legacy API which breaks EdgeToEdge mode in RN, so
+// in order to use library on all available platforms we have to monkey patch
+// default RN implementation and use modern `WindowInsetsControllerCompat`.
+const ModifiedNativeAndroidManager = {
+  ...NativeAndroidManager.default,
+  // Spread original properties to keep existing functionality
+  setColor: (color, animated) => {
+    RCTStatusBarManagerCompat.setColor(color, animated);
+  },
+  setTranslucent: translucent => {
+    RCTStatusBarManagerCompat.setTranslucent(translucent);
+  },
+  /**
+   *  - statusBarStyles can be:
+   *    - 'default'
+   *    - 'dark-content'
+   */
+  setStyle: statusBarStyle => {
+    RCTStatusBarManagerCompat.setStyle(statusBarStyle);
+  },
+  setHidden: hidden => {
+    RCTStatusBarManagerCompat.setHidden(hidden);
+  }
+};
+
+// Define a function to apply the monkey patch
+const applyMonkeyPatch = () => {
+  Object.assign(NativeAndroidManager.default, ModifiedNativeAndroidManager);
+};
+
+// Define a function to revert changes back to the original state
+exports.applyMonkeyPatch = applyMonkeyPatch;
+const revertMonkeyPatch = () => {
+  Object.assign(NativeAndroidManager.default, OriginalNativeAndroidManager);
+};
+exports.revertMonkeyPatch = revertMonkeyPatch;
+//# sourceMappingURL=monkey-patch.android.js.map

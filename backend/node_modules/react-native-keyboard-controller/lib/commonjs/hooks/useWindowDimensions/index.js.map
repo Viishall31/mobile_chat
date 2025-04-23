@@ -1,0 +1,1 @@
+{"version":3,"names":["_reactNative","require"],"sources":["index.ts"],"sourcesContent":["export { useWindowDimensions } from \"react-native\";\n"],"mappings":";;;;;;;;;;;AAAA,IAAAA,YAAA,GAAAC,OAAA","ignoreList":[]}
