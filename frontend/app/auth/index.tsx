@@ -9,7 +9,7 @@ export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { signIn } = useAuth();
+  const { signIn, continueAsGuest } = useAuth();
 
   const handleAuth = async () => {
     try {
@@ -23,6 +23,10 @@ export default function AuthScreen() {
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Something went wrong');
     }
+  };
+
+  const handleGuestLogin = async () => {
+    await continueAsGuest();
   };
 
   return (
@@ -45,6 +49,11 @@ export default function AuthScreen() {
       <TouchableOpacity style={styles.button} onPress={handleAuth}>
         <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Sign Up'}</Text>
       </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.guestButton} onPress={handleGuestLogin}>
+        <Text style={[styles.buttonText, { color: '#007AFF' }]}>Continue as Guest</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => setIsLogin(!isLogin)}>
         <Text style={styles.switchText}>
           {isLogin ? 'Need an account? Sign up' : 'Already have an account? Login'}
@@ -78,6 +87,14 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 5,
     marginTop: 10,
+  },
+  guestButton: {
+    backgroundColor: 'transparent',
+    padding: 15,
+    borderRadius: 5,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#007AFF',
   },
   buttonText: {
     color: 'white',

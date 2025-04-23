@@ -72,19 +72,32 @@ const io = socketIo(server, {
   }
 });
 
+// Modified Socket.io middleware to handle both guest and authenticated users
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    socket.userId = decoded.userId;
+  const { userId, username, isGuest } = socket.handshake.query;
+
+  if (isGuest === 'true') {
+    // For guest users, use the provided userId and username
+    socket.userId = userId;
+    socket.username = username;
+    socket.isGuest = true;
     next();
-  } catch (err) {
-    next(new Error('Authentication error'));
+  } else {
+    try {
+      // For authenticated users, verify the token
+      const decoded = jwt.verify(token, JWT_SECRET);
+      socket.userId = decoded.userId;
+      socket.isGuest = false;
+      next();
+    } catch (err) {
+      next(new Error('Authentication error'));
+    }
   }
 });
 
 io.on('connection', async (socket) => {
-  console.log('User connected:', socket.userId);
+  console.log('User connected:', socket.isGuest ? 'Guest' : 'User', socket.userId);
   
   // Send previous messages on connection
   try {
@@ -96,8 +109,8 @@ io.on('connection', async (socket) => {
     
     const formattedMessages = messages.map(msg => ({
       id: msg._id,
-      userId: msg.userId._id,
-      username: msg.userId.username,
+      userId: msg.userId._id || msg.userId, // Handle both registered and guest users
+      username: msg.userId.username || msg.username,
       text: msg.text,
       timestamp: msg.timestamp
     }));
@@ -109,17 +122,25 @@ io.on('connection', async (socket) => {
 
   socket.on('message', async (data) => {
     try {
-      const user = await User.findById(socket.userId);
+      let username;
+      if (socket.isGuest) {
+        username = socket.username;
+      } else {
+        const user = await User.findById(socket.userId);
+        username = user.username;
+      }
+
       const newMessage = new Message({
         userId: socket.userId,
-        text: data.text
+        text: data.text,
+        username: socket.isGuest ? socket.username : undefined // Store username for guest messages
       });
       await newMessage.save();
 
       const messageData = {
         id: newMessage._id,
         userId: socket.userId,
-        username: user.username,
+        username: username,
         text: data.text,
         timestamp: newMessage.timestamp
       };
@@ -131,7 +152,7 @@ io.on('connection', async (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.userId);
+    console.log('User disconnected:', socket.isGuest ? 'Guest' : 'User', socket.userId);
   });
 });
 
